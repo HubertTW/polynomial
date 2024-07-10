@@ -2,32 +2,52 @@ import json
 import re
 import numpy as np
 
-
 class Data:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+    def __str__(self):
+        return str(self.x) + ' ' + str(self.y)
 
 
-def interpolate(f: list, n: int, p) -> float:
+def interpolate(f: list, n, p):
     result = np.poly1d([0])
+    print("n is", n)
     for i in range(n):
-        term = f[i].y
-        temp = 1
+        term = f[i].y % p
+        poly = np.poly1d([1])
         for j in range(n):
             if j != i:
-                t = (f[i].x - f[j].x)
-                print("t: ", t)
-                # term = term * (xi - f[j].x) / (f[i].x - f[j].x)
-                temp = temp * np.poly1d([1, -f[j].x]) * pow(t, -1, p)
-                # print(temp)
-        temp = temp * term
-        result += temp
-    print(result)
+                bottom = (f[i].x - f[j].x)
+                #print("bottom :", bottom)
+                #print("bottom mod inverse:", pow(bottom, -1, p))
+                print(f"d: {bottom}")
+                poly *= np.poly1d([1, -f[j].x])
+                term = (term * (pow(bottom, -1, p))) % p
+
+        result += term % p * poly
+    #print(result)
     l = []
     for i in result:
         l.append(i % p)
     return l
+
+def interpolate_test(f: list, xi: int, n: int) -> float:
+
+    # Initialize result
+    result = 0.0
+    for i in range(n):
+
+        # Compute individual terms of above formula
+        term = f[i].y
+        for j in range(n):
+            if j != i:
+                term = term * (xi - f[j].x) / (f[i].x - f[j].x)
+
+        # Add current term to result
+        result += term
+
+    return result
 
 
 if __name__ == "__main__":
@@ -64,7 +84,7 @@ if __name__ == "__main__":
             labels = label.split(',')
             for lbl in labels:
                 lbl = lbl.strip()
-                if lbl and lbl not in ["a", "p", "l", "e"]:
+                if lbl and lbl not in ["a","b"]:
                     lbl = "new_label"
                 if lbl:
                     if dir_back:
@@ -96,13 +116,11 @@ if __name__ == "__main__":
     dfa_json = json.dumps(dfa_dict, indent=2)
     print(dfa_json)
 
-    encoding = {"a": 1, "p": 2, "l": 3, "e": 4, "new_label": 5}
+    encoding = {"a": 1, "b": 2, "new_label": 3}
 
-    # 初始化 m 和 n 的列表
     m = []
     n = []
 
-    # 遍歷 transitions 列表
     for transition in dfa_dict["transitions"]:
         from_state = int(transition["from"])
         to_state = int(transition["to"])
@@ -110,32 +128,32 @@ if __name__ == "__main__":
 
         for inp in inputs:
             if inp in encoding:
-                m_i = from_state * 5 + encoding[inp]
+                m_i = from_state * 3 + encoding[inp]
                 n_i = to_state
                 m.append(m_i)
                 n.append(n_i)
 
-    # 打印結果
+    #m=[2,4,6]
+    #n=[17,45,85]
+    #points = [Data(1, 1), Data(2, 4), Data(3, 9)]
+    #points = [Data(1,5),Data(2,11),Data(3,19)]
+    points = [Data(m[i], n[i]) for i in range(0,11)]
+    coef = interpolate(points, len(points), 23)
+    for point in points:
+        print(f"Data(x={point.x}, y={point.y})")
+    polynomial = np.poly1d(coef)
     print("m:", m)
     print("m len", len(m))
     print("n:", n)
     print("n len", len(n))
 
+    for point in points[:]:
+        print(f"x={point.x}, y={polynomial(point.x) % 23}")
+    print("final result :", coef[::-1])
 
-    #points = [Data(1, 1), Data(2, 4), Data(3, 9)]
-    points = [Data(1,1),Data(2,2)]
-    #points = [Data(m[i], n[i]) for i in range(len(m))]
+    #print("test", interpolate_test(points,13,18 ))
 
-    # 打印結果
-    for point in points:
-        print(f"Data(x={point.x}, y={point.y})")
-
-
-
-    #p = np.poly1d([4, 1, 3])
-    #q = np.poly1d([2, 4])
-
-    print(interpolate(points, 40, 61))
+    #print(interpolate(points, len(points), 89))
 
 
 '''    node_pattern = re.compile(r'node \[shape = doublecircle\]; (.+) ;')

@@ -1,39 +1,53 @@
 import json
 import re
 import numpy as np
+from numpy.polynomial import Polynomial
+
 
 class Data:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+
     def __str__(self):
         return str(self.x) + ' ' + str(self.y)
 
 
+def evaluate_polynomial(coeffs, x, p):
+    result = 0
+    for coeff in coeffs:
+        result = (result * x + coeff) % p
+    return result
+
+
 def interpolate(f: list, n, p):
     result = np.poly1d([0])
-    print("n is", n)
     for i in range(n):
-        term = f[i].y % p
+        term = f[i].y
         poly = np.poly1d([1])
         for j in range(n):
             if j != i:
                 bottom = (f[i].x - f[j].x)
-                #print("bottom :", bottom)
-                #print("bottom mod inverse:", pow(bottom, -1, p))
-                print(f"d: {bottom}")
+                #print(f"bottom {bottom}")
                 poly *= np.poly1d([1, -f[j].x])
+                poly = mod_poly(poly, p)
                 term = (term * (pow(bottom, -1, p))) % p
-
-        result += term % p * poly
-    #print(result)
+        result += term * poly
+        result = mod_poly(result, p)
+        #print(result)
+        #print("-----------")
     l = []
     for i in result:
         l.append(i % p)
     return l
 
-def interpolate_test(f: list, xi: int, n: int) -> float:
 
+def mod_poly(poly, p):
+    coeffs = poly.coeffs % p
+    return np.poly1d(coeffs)
+
+
+def interpolate_test(f: list, xi: int, n: int) -> float:
     # Initialize result
     result = 0.0
     for i in range(n):
@@ -53,8 +67,12 @@ def interpolate_test(f: list, xi: int, n: int) -> float:
 if __name__ == "__main__":
 
     #file_path = 'console-export-2024-5-21_15-32-24.txt'
-    file_path = '20240704.txt'
+    file_path = '20240711.txt'
     # file_path = 'console-export-2024-5-21_12-44-3.txt'
+    #encoding = {"a": 1, "b": 2, "new_label": 3}
+    encoding = {"a": 1, "p": 2, "l": 3, "e": 4, "new_label": 5}
+    target = ["a", "p","l", "e" ]
+    k = 5
     with open(file_path, 'r') as file:
         file_content = file.read()
 
@@ -84,7 +102,7 @@ if __name__ == "__main__":
             labels = label.split(',')
             for lbl in labels:
                 lbl = lbl.strip()
-                if lbl and lbl not in ["a","b"]:
+                if lbl and lbl not in target:
                     lbl = "new_label"
                 if lbl:
                     if dir_back:
@@ -116,8 +134,6 @@ if __name__ == "__main__":
     dfa_json = json.dumps(dfa_dict, indent=2)
     print(dfa_json)
 
-    encoding = {"a": 1, "b": 2, "new_label": 3}
-
     m = []
     n = []
 
@@ -128,52 +144,24 @@ if __name__ == "__main__":
 
         for inp in inputs:
             if inp in encoding:
-                m_i = from_state * 3 + encoding[inp]
+                m_i = from_state * k + encoding[inp]
                 n_i = to_state
                 m.append(m_i)
                 n.append(n_i)
 
-    #m=[2,4,6]
-    #n=[17,45,85]
-    #points = [Data(1, 1), Data(2, 4), Data(3, 9)]
-    #points = [Data(1,5),Data(2,11),Data(3,19)]
-    points = [Data(m[i], n[i]) for i in range(0,11)]
-    coef = interpolate(points, len(points), 23)
-    for point in points:
-        print(f"Data(x={point.x}, y={point.y})")
-    polynomial = np.poly1d(coef)
     print("m:", m)
     print("m len", len(m))
     print("n:", n)
     print("n len", len(n))
 
+    points = [Data(m[i], n[i]) for i in range(0, len(m))]
+    coef = interpolate(points, len(points), 101)
+    polynomial = np.poly1d(coef)
+    for point in points:
+        print(f"Data(x={point.x}, y={point.y})")
+
     for point in points[:]:
-        print(f"x={point.x}, y={polynomial(point.x) % 23}")
+        print(f"x={point.x}, y={evaluate_polynomial(coef, point.x, 101) % 101}")
+
+    print(polynomial)
     print("final result :", coef[::-1])
-
-    #print("test", interpolate_test(points,13,18 ))
-
-    #print(interpolate(points, len(points), 89))
-
-
-'''    node_pattern = re.compile(r'node \[shape = doublecircle\]; (.+) ;')
-    edge_pattern = re.compile(r'(\d+) -> (\d+) \[ label = "(.*?)"  (dir = back)?\];')
-
-    nodes_match = node_pattern.search(file_content)
-    edges_match = edge_pattern.findall(file_content)
-
-    data = {
-        "nodes": nodes_match.group(1) if nodes_match else "",
-        "edges": [{"from": m[0], "to": m[1], "label": m[2]} for m in edges_match]
-    }
-    #alphabet = ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"]
-    single = ['f', 'o', 'd']
-
-
-    print(len(data['edges']))
-    json_data = json.dumps(data, indent=4)
-    print(json_data)
-
-    #for i in range(0, len(data['edges'])):
-
-'''

@@ -66,13 +66,16 @@ def interpolate_test(f: list, xi: int, n: int) -> float:
 
 if __name__ == "__main__":
 
-    #file_path = 'console-export-2024-5-21_15-32-24.txt'
-    file_path = '20240711.txt'
-    # file_path = 'console-export-2024-5-21_12-44-3.txt'
+    file_path = 'f[a-z]*.txt'
     #encoding = {"a": 1, "b": 2, "new_label": 3}
-    encoding = {"a": 1, "p": 2, "l": 3, "e": 4, "new_label": 5}
-    target = ["a", "p","l", "e" ]
-    k = 5
+    #encoding = {"a": 1, "p": 2, "l": 3, "e": 4, "new_label": 5}
+    #encoding = {"c": 1, "o":2,"r":3,"l":4,"d":5, "new_label": 6}
+    encoding = {"f":1," ":2, "new_label":3}
+    target = ["f", " "]
+    #target = ["a", "p", "l", "e"]
+    #target = ["a", "b"]
+    k = len(encoding)
+    p = 47
     with open(file_path, 'r') as file:
         file_content = file.read()
 
@@ -130,9 +133,17 @@ if __name__ == "__main__":
         ]
     }
 
-    # Convert to JSON string for readability
+
+    # add blank edges to zero state
+    new_edges = [{"from": state, "to": "0", "input": [" "]} for state in dfa_dict["states"] if state != "0"]
+    dfa_dict["transitions"].extend(new_edges)
     dfa_json = json.dumps(dfa_dict, indent=2)
     print(dfa_json)
+
+    count = 0
+    for i in dfa_dict["transitions"]:
+        count += len(i["input"])
+    print("the edge count is", count)
 
     m = []
     n = []
@@ -155,13 +166,14 @@ if __name__ == "__main__":
     print("n len", len(n))
 
     points = [Data(m[i], n[i]) for i in range(0, len(m))]
-    coef = interpolate(points, len(points), 101)
+    coef = interpolate(points, len(points), p)
     polynomial = np.poly1d(coef)
     for point in points:
         print(f"Data(x={point.x}, y={point.y})")
 
     for point in points[:]:
-        print(f"x={point.x}, y={evaluate_polynomial(coef, point.x, 101) % 101}")
+        print(f"x={point.x}, y={evaluate_polynomial(coef, point.x, p) % p}")
 
     print(polynomial)
-    print("final result :", coef[::-1])
+    final_result = [int(num) for num in coef[::-1] ]
+    print("final result :", final_result )
